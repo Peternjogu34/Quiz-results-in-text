@@ -1,0 +1,138 @@
+import json
+import random
+import time
+import os
+
+QUESTIONS_FILE = "questions.json"
+SCORES_FILE = "scores.json"
+TIME_LIMIT = 20
+
+
+class Quiz:
+
+    def __init__(self):
+        self.score = 0
+        self.questions = []
+
+    def load_questions(self):
+        with open(QUESTIONS_FILE, "r") as file:
+            self.questions = json.load(file)
+
+        random.shuffle(self.questions)
+
+    def ask_question(self, question):
+
+        print("\n" + "=" * 50)
+        print(question["question"])
+        print("=" * 50)
+
+        for i, option in enumerate(question["options"], start=1):
+            print(f"{i}. {option}")
+
+        start = time.time()
+
+        try:
+            answer = int(input("\nYour answer: "))
+        except ValueError:
+            answer = 0
+
+        elapsed = time.time() - start
+
+        if elapsed > TIME_LIMIT:
+            print("⏰ Time is up!")
+            return
+
+        if answer == question["answer"]:
+            print("✅ Correct!")
+            self.score += 1
+        else:
+            correct = question["options"][question["answer"] - 1]
+            print(f"❌ Wrong!")
+            print(f"Correct answer: {correct}")
+
+    def save_score(self, name):
+
+        if os.path.exists(SCORES_FILE):
+            with open(SCORES_FILE, "r") as file:
+                scores = json.load(file)
+        else:
+            scores = []
+
+        percentage = (self.score / len(self.questions)) * 100
+
+        scores.append({
+            "name": name,
+            "score": self.score,
+            "percentage": percentage
+        })
+
+        with open(SCORES_FILE, "w") as file:
+            json.dump(scores, file, indent=4)
+
+    def leaderboard(self):
+
+        if not os.path.exists(SCORES_FILE):
+            return
+
+        with open(SCORES_FILE, "r") as file:
+            scores = json.load(file)
+
+        scores.sort(key=lambda x: x["score"], reverse=True)
+
+        print("\n")
+        print("=" * 50)
+        print("LEADERBOARD")
+        print("=" * 50)
+
+        for player in scores[:10]:
+            print(
+                f"{player['name']:15} "
+                f"{player['score']} pts "
+                f"({player['percentage']:.1f}%)"
+            )
+
+    def start(self):
+
+        self.load_questions()
+
+        print("\nWelcome to the Python Quiz!")
+
+        for question in self.questions:
+            self.ask_question(question)
+
+        percentage = (self.score / len(self.questions)) * 100
+
+        print("\n")
+        print("=" * 50)
+        print("QUIZ FINISHED")
+        print("=" * 50)
+        print(f"Score: {self.score}/{len(self.questions)}")
+        print(f"Percentage: {percentage:.1f}%")
+
+        if percentage >= 80:
+            print("🏆 Excellent!")
+        elif percentage >= 60:
+            print("👍 Good job!")
+        else:
+            print("📚 Keep practicing!")
+
+        name = input("\nEnter your name: ")
+
+        self.save_score(name)
+
+        self.leaderboard()
+
+
+if __name__ == "__main__":
+
+    while True:
+
+        quiz = Quiz()
+
+        quiz.start()
+
+        again = input("\nPlay again? (y/n): ").lower()
+
+        if again != "y":
+            print("\nThanks for playing!")
+            break
